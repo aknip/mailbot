@@ -2,17 +2,8 @@ function doGet(e) {
 
   if(typeof e !== 'undefined')
     {
-    //var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    var spreadsheet = SpreadsheetApp.openById("xxx");
-    var log_sheet = spreadsheet.getSheetByName("log");
-    var log_sheet_data = log_sheet.getDataRange();
-    var log_sheet_rows = log_sheet_data.getNumRows();
-    var now = new Date();
-    currenttime = Utilities.formatDate(now, 'Europe/Berlin', 'yyyy-MM-dd HH:mm:ss');
-    log_sheet.getRange(log_sheet_rows+1, 1).setValue(currenttime)
-    log_sheet.getRange(log_sheet_rows+1, 2).setValue('GET')
-    log_sheet.getRange(log_sheet_rows+1, 3).setValue(JSON.stringify(e.parameter))
-  
+    mylog(appMode, 'GET', JSON.stringify(e.parameter))
+    
     return ContentService.createTextOutput(JSON.stringify(e.parameter));
     }
 }
