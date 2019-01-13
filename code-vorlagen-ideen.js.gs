@@ -1,5 +1,5 @@
 
-// clean Object without 'this'
+// clean Object without using 'this'
 // including public and private functions
 // see https://medium.freecodecamp.org/removing-javascripts-this-keyword-makes-it-a-better-language-here-s-why-db28060cc086
 
