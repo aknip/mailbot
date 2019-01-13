@@ -13,8 +13,35 @@ function run_unit_tests() {
 function run_unit_tests_individual_context() {  
   var myContext = {
     appMode: 'online-test',
-    spreadsheetID: 'your-ID',
-    log: function(message) {Logger.log(message)}
+    spreadsheetID: 'myID',
+    log: function(context, header, message) {
+      // Logger.log('MYLOG:')
+      // Logger.log(context)
+      // log to console
+      console.log(message);
+      Logger.log(message)
+      
+      // log to spreadsheet
+      var spreadsheet = SpreadsheetApp.openById(context.spreadsheetID); //var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+      var log_sheet = spreadsheet.getSheetByName("log");
+      var log_sheet_data = log_sheet.getDataRange();
+      var log_sheet_rows = log_sheet_data.getNumRows();
+      var now = new Date();
+      currenttime = Utilities.formatDate(now, 'Europe/Berlin', 'yyyy-MM-dd HH:mm:ss');
+      log_sheet.getRange(log_sheet_rows+1, 1).setValue(currenttime)
+      log_sheet.getRange(log_sheet_rows+1, 2).setValue(header)
+      log_sheet.getRange(log_sheet_rows+1, 3).setValue(message)
+      
+      
+      // log to HTML / DOM when developing offline / in the browser
+        /*
+      var para = document.getElementById('log'); 
+      var logtext = para.innerHTML; 
+      logtext = logtext + "<br><br><b>" + header + '</b><br>';
+      logtext = logtext + log_syntaxHighlight(message) //JSON.stringify(message, 0, 2);
+      para.innerHTML = logtext;
+        */
+    }
   }
   unit_tests(myContext)
 }
