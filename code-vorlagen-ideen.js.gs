@@ -1,34 +1,131 @@
+function wrapper() {
+
 
 // clean Object without using 'this'
 // including public and private functions
 // see https://medium.freecodecamp.org/removing-javascripts-this-keyword-makes-it-a-better-language-here-s-why-db28060cc086
 
 function vanillaObject(param) {
-  var myVar = 2;
+  var myVarPublic = 2;
+  var myVarPrivate = param;
+
   function private1() {
     
   }
-  function public1() {
-    Logger.log(myVar);
-    myVar = myVar + 1;
+  function publicGetter() {
+    return myVarPrivate;
   }
-  function public2() {
-    Logger.log(myVar);
-    Logger.log(param);
+  function publicSetter(param) {
+    myVarPrivate = param;
+    return myVarPrivate;
   }
   // public functions (API)
   return Object.freeze({
-    public1: public1,
-    public2: public2
+    myVarPublic1: myVarPublic,
+    publicGetter1: publicGetter,
+    publicSetter1: publicSetter
   });
 }
 
 /*
-var myVanillaObject = vanillaObject(4711);
-
-myVanillaObject.public1()
-myVanillaObject.public2()
+// TEST OBJECT:
+var myVanillaObject = vanillaObject(666);  
+Logger.log(myVanillaObject.publicGetter1());
+Logger.log(myVanillaObject.publicSetter1(999));
+Logger.log(myVanillaObject.publicGetter1());
+Logger.log(myVanillaObject);
 */
+
+
+
+//
+//
+// REST API
+//
+
+
+function doGet(e) {
+
+  if(typeof e !== 'undefined')
+    {
+    Logger.log(JSON.stringify(e.parameter));
+    return ContentService.createTextOutput(JSON.stringify(e.parameter));
+    }
+}
+
+function doPost(e) {
+  
+  if(typeof e !== 'undefined')
+    {
+    Logger.log(JSON.stringify(e.parameter));
+    return ContentService.createTextOutput(JSON.stringify(e.parameter));
+    }
+}
+
+function testPOST() {
+  
+  var url = ScriptApp.getService().getUrl();
+  
+  var payload =
+      {
+        "name" : "labnol",
+        "blog" : "ctrlq",
+        "type" : "post",
+      };
+  
+  var options =
+      {
+        "method"  : "POST",
+        "payload" : payload,   
+        "followRedirects" : true,
+        "muteHttpExceptions": true
+      };
+  
+  var result = UrlFetchApp.fetch(url, options);
+  
+  if (result.getResponseCode() == 200) {
+    
+    var params = JSON.parse(result.getContentText());
+    
+    Logger.log('POST Test:');
+    Logger.log(params.name);
+    Logger.log(params.blog);
+    
+  }
+  
+}
+
+function testGET() {
+  
+  var queryString = "?name=labnol&blog=ctrlq&type=get";
+  
+  var url = ScriptApp.getService().getUrl() + queryString;
+  
+  var options =
+      {
+        "method"  : "GET",   
+        "followRedirects" : true,
+        "muteHttpExceptions": true
+      };
+    
+  var result = UrlFetchApp.fetch(url, options);
+  
+  if (result.getResponseCode() == 200) {
+    
+    var params = JSON.parse(result.getContentText());
+    
+    Logger.log('GET Test:');
+    Logger.log(url);
+    Logger.log(params.name);
+    Logger.log(params.blog);
+    
+  }  
+}
+
+
+
+
+
 
 
 // 
@@ -366,4 +463,6 @@ function createPlanning() {
   
 }
 
+// END WRAPPER
+}
 

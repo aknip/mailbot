@@ -61,16 +61,18 @@ function unit_tests(context) {
   test.log('start testing...');
   
   test.check('Test 1: Mailparser D&O offer, 4 data points', function () {
+    var ID = 4711;
     var mail = {'subject':'Test 1','from':'user1 <user1@abc.com>','body':'I want an D & O Offer\r\nName: ABC, Umsatz: 2500000','type':'get'};
-    var mail_data = parseMailBody(context, mail.body); 
-    var expected_data = {"intent":{"action":"create offer","parameter":"d&o"},"data":[{"label":"Name","value":"ABC"},{"label":"Turnover","value":"2500000"}]};
+    var mail_data = parseMailBody(context, mail.body, ID); 
+    var expected_data = {"intent":{"action":"Create offer","parameter":"D&O"},"data":[{"label":"Name","value":"ABC"},{"label":"Turnover","value":"2500000"}]};
     test.expect.deeplyEqual(mail_data, expected_data);
   });
   
   test.check('Test 2: Mailparser Cyber offer, 7 data points', function () {
+    var ID = 4712;
     var mail = {'subject':'WG: WG: Test','from':'NN <nn@abc.com>','body':'ich hätte gern ein angebot für cyber\r\nwhat industry group:IT "hier text dazwischen" Test Label:test, employees number:10.000 / limit:500,00,Außenumsatz=1.000.000\ntest:test / Volume  :  2.500.000.000\r\nzeile 2\r\n\r\nVon: abc@abc.com [mailto:abc@abc.com]\r\nGesendet: Montag, 7. Januar 2019 20:47\r\nAn: N.N.\r\nBetreff: Aw: WG: Test\r\n\r\nReply von web.de\r\nZeile 2\r\n\r\nGesendet: Montag, 07. Januar 2019 um 20:45 Uhr\r\nVon: \'N.N.\' <nn@abc.com<mailto:nn@abc.com>>\r\nAn: \'abc@abc.com<mailto:abc@abc.com>\' <abc@abc.com<mailto:abc@abc.com>>\r\nBetreff: WG: Test\r\n\r\n\r\nVon: N.N. [mailto:abc@abc.com]\r\nGesendet: Montag, 7. Januar 2019 20:43\r\nAn: N.N.\r\nBetreff: Re: Test\r\n\r\nReply 3 (von Gmail)\r\nZeile 2\r\n\r\nAm Mo., 7. Jan. 2019 um 20:41 Uhr schrieb NN <nn@abc.com<mailto:nn@abc.com>>:\r\nBody 1\r\nBody 2\r\n\r\nVon: N.N.\r\nGesendet: Montag, 7. Januar 2019 20:42\r\nAn: N.N.\r\nBetreff: AW: Test\r\n\r\nReply 1\r\nZeile 2\r\n\r\nVon: N.N.\r\nGesendet: Montag, 7. Januar 2019 20:42\r\nAn: N.N.\r\nBetreff: Test\r\n\r\nBody 1\r\nBody 2\r\n','type':'get'};
-    var mail_data = parseMailBody(context, mail.body); 
-    var expected_data = {"intent":{"action":"create offer","parameter":"cyber"},"data":[{"label":"what industry group","value":"IT"},{"label":"Test Label","value":"test"},{"label":"employees number","value":"10000"},{"label":"limit","value":"500,00"},{"label":"Turnover","value":"1000000"},{"label":"test","value":"test"},{"label":"Volume","value":"2500000000"}]};
+    var mail_data = parseMailBody(context, mail.body, ID); 
+    var expected_data = {"intent":{"action":"Create offer","parameter":"Cyber"},"data":[{"label":"what industry group","value":"IT"},{"label":"Test Label","value":"test"},{"label":"employees number","value":"10000"},{"label":"limit","value":"500,00"},{"label":"Turnover","value":"1000000"},{"label":"test","value":"test"},{"label":"Volume","value":"2500000000"}]};
     //test.log(JSON.stringify(mail_data)) 
     test.expect.deeplyEqual(mail_data, expected_data);
   });

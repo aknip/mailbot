@@ -6,24 +6,610 @@
 //
 // DEV-TEST STARTER
 //
+
 function devTest() {
-   
-  context().log(context(), 'DEV', 'Start DEV Logging')
-  var mail = {'subject':'Test 1','from':'user1 <user1@abc.com>','body':'I want an D & O Offer\r\nName: ABC, Umsatz: 2500000','type':'get'};
-  var mail_data = parseMailBody(context(), mail.body);  
-  context().log(context(), 'DEV', JSON.stringify(mail_data));
+  var myContext = context();
+  var test = tyrionTestRunner(myContext);
+  var mailData = {};
   
-  // do quick unit test, disable via 'xcheck'
-  var test = tyrionTestRunner(context());
-  test.xcheck('Test 1: Mailparser D&O offer, 4 data points', function () {
-    var expected_data = {"intent":{"action":"create offer","parameter":"d&o"},"data":[{"label":"Name","value":"ABC"},{"label":"Turnover","value":"2500000"}]};
-    test.expect.deeplyEqual(mail_data, expected_data);
+  test.group('TEST: USERANLAGE', function () {
+    mailData = {};
+    mailData['from']       = 'user1 <user1@abc.com>';
+    mailData['subject']    = 'Neuer user';
+    mailData['body-plain'] = 'Ich möchte mich als User registrieren\r\nName: Mustermann, Email: peter@mustermann.com';
+    var processResult = processIncomingMail(myContext, mailData);
+    test.check('Nachfrage "Firmenname"', function () { 
+      test.expect(processResult.responseObjResult.body.indexOf('Firmenname') >= 0);
+    });
+    
+    mailData = {};
+    mailData['from']       = 'user1 <user1@abc.com>';
+    mailData['subject']    = processResult.responseObjResult.subject;
+    mailData['body-plain'] = 'Hier meine Antwort\nFirmenname: Musterfirma';
+    var processResult = processIncomingMail(myContext, mailData);
+    test.check('Daten vollständig erfasst."', function () { 
+      test.expect(processResult.responseObjResult.body.indexOf('Registrierung erfolgreich durchgeführt.') >= 0);
+    });
+  })
+  
+  //myContext.log(context, 'checkProcessResult:', "************* MISSING:");
+  //myContext.log(context, 'checkProcessResult:', JSON.stringify(checkProcessResult));
+  
+  
+  /*
+  
+  var mailData = {'subject':'D&O Angebot','from':'user1 <user1@abc.com>','body-plain':'Bitte senden Sie mir ein D & O Angebot\r\nKundenname: ABCGmbH, Umsatz: 2500000,95'}  
+  //processIncomingMail(myContext, mailData);
+  var IDobj = storeMailToInbox(myContext, mailData);
+  var mailParsedData = parseMailBody(myContext, mailData['body-plain'], IDobj);
+  var processIDfound = parseProcessID(myContext, mailData);
+  var newProcessID = storeMailDataToProcess(myContext, processIDfound, mailParsedData, mailData);
+  
+  test.group('TEST GROUP 1', function () {
+    var b = {};
+    test.beforeAll(function () {
+      b = { something: 'example' };
+    });
+      
+    test.check('DevTest: Mailparser D&O offer, New ID created', function () {      
+      var expected_data = newProcessID;
+      test.expect.identical(newProcessID, expected_data);
+    });
+    
+    test.check('DevTest: Mailparser D&O offer, action', function () {      
+      var expected_data = 'Create offer';
+      test.expect.identical(mailParsedData.intent.action, expected_data);
+    });
+    
+    test.check('DevTest: Mailparser D&O offer, action parameter', function () {      
+      var expected_data = 'D&O';
+      test.expect.identical(mailParsedData.intent.parameter, expected_data);
+    });
+    
+    test.check('DevTest: Mailparser D&O offer, 4 data points', function () {      
+      var expected_data = [{"label":"Kundenname","value":"ABCGmbH"},{"label":"Umsatz","value":"2500000,95"}];
+      test.expect.deeplyEqual(mailParsedData.data, expected_data);
+    });
+  })
+  
+  var theID = newProcessID;
+  
+  
+  // TODO
+  
+  
+  var validationResult = validateProcessData(myContext, newProcessID);
+  var checkProcessResult = checkProcessStep(myContext, newProcessID); 
+  var responseObjResult = createResponseText(myContext, newProcessID);
+  sendResponseMail(myContext, responseObjResult);
+    
+  var mailData = {'subject':'Re: D&O Angebot ##ID'+theID+'## Re:xxx','from':'user1 <user1@abc.com>','body-plain':'Deckungssumme: 1.000.000, Mitarbeiter: 700; Branche: IT'} 
+  var IDobj = storeMailToInbox(myContext, mailData);
+  var mailParsedData = parseMailBody(myContext, mailData['body-plain'], IDobj);
+  var processIDfound = parseProcessID(myContext, mailData);
+  var newProcessID = storeMailDataToProcess(myContext, processIDfound, mailParsedData, mailData);
+  
+  test.group('TEST GROUP 2', function () {
+    var b = {};
+    test.beforeAll(function () {
+      b = { something: 'example' };
+    });
+      
+    test.check('DevTest: Mailparser D&O offer, Existing ID found', function () {      
+      var expected_data = theID;
+      test.expect.identical(newProcessID, expected_data);
+    });
+    
+    test.check('DevTest: Mailparser D&O offer, action', function () {      
+      var expected_data = 'Create offer';
+      test.expect.identical(mailParsedData.intent.action, expected_data);
+    });
+    
+    test.check('DevTest: Mailparser D&O offer, action parameter', function () {      
+      var expected_data = 'D&O';
+      test.expect.identical(mailParsedData.intent.parameter, expected_data);
+    });
+    
+    test.check('DevTest: Mailparser D&O offer, 4 data points', function () {      
+      var expected_data = [{"label":"Deckungssumme","value":"1000000"},{"label":"Mitarbeiter","value":"700"}, {"label":"Branche","value":"IT"}];
+      test.expect.deeplyEqual(mailParsedData.data, expected_data);
+    });
+  })
+  
+  */
+    
+  test.end();
+  
+}
+
+
+function validateProcessData(context, processID) {
+  /*
+  - Lookup current process definition and step in Sheet 'ProcessProductDefinitions'
+  - Check, if all filled fields which are alread filled are in the correct format 
+  - data types: Currencies, Numbers...
+  - valid enums: Check for "list all" command to add ALL available enums in error-text
+  - For all errors: Remove filled values, move them to column ERRORS
+  */
+  
+  // select current process Doc
+  var processFiddler = context.loadProcessFiddler();
+  processFiddler.filterRows (function (row,properties) {
+    return ((row.ProcessID == processID) && (row.ProcessCurrent == 'x') );
   });
+  var processDoc = processFiddler.getData()[0];
+  
+  // select current process Defintion
+  var processProductDefinitionsFiddler = context.loadProcessProductDefinitionsFiddler();
+  processProductDefinitionsFiddler.filterRows (function (row,properties) {
+    return ((row.IntentAction == processDoc.IntentAction) && (row.IntentParameter == processDoc.IntentParameter));
+  });
+  var processDefinitions = processProductDefinitionsFiddler.getData() // Array
+  //
+  // 1. Check for process step
+  //
+  var currentProcessStep = processDoc.ProcessStep;
+  if (currentProcessStep == ''){
+    // no process step defined, use first one
+    currentProcessStep = processDefinitions[0].ProcessStep;
+  }
+}
+
+
+
+function checkProcessStep(context, processID) {
+  /*
+  - Lookup current process definition and step in Sheet 'ProcessProductDefinitions'
+  - Check in sheet 'Processes', if all required fields are filled. If yes, set next process step
+  */
+  
+  // select current process Doc
+  var processFiddler = context.loadProcessFiddler();
+  processFiddler.filterRows (function (row,properties) {
+    return ((row.ProcessID == processID) && (row.ProcessCurrent == 'x') );
+  });
+  var processDoc = processFiddler.getData()[0];
+  
+  // select current process Defintion
+  var processProductDefinitionsFiddler = context.loadProcessProductDefinitionsFiddler();
+  processProductDefinitionsFiddler.filterRows (function (row,properties) {
+    return ((row.IntentAction == processDoc.IntentAction) && (row.IntentParameter == processDoc.IntentParameter));
+  });
+  var processDefinitions = processProductDefinitionsFiddler.getData() // Array
+  
+  //
+  // 1. Check for current process step
+  //
+  var currentProcessStep = processDoc.ProcessStep;
+  if (currentProcessStep == ''){
+    // no process step defined, use first one
+    currentProcessStep = processDefinitions[0].ProcessStep;
+  }
+  for (var i in processDefinitions) {
+    // loop through all process definition steps
+    var tempDefinition = processDefinitions[i];
+  }
+  
+  processProductDefinitionsFiddler = context.loadProcessProductDefinitionsFiddler();
+  processDefinitions = processProductDefinitionsFiddler.getData() // Array
+  
+  //
+  // 2. Check in sheet 'Processes', if all required fields are filled. If yes, set next process step
+  //
+  var processData = JSON.parse(processDoc.Data).data;
+  var missingRequiredFieldnames = [];
+  for (var i in processDefinitions) {
+    if ((processDefinitions[i].IntentAction == processDoc.IntentAction) && (processDefinitions[i].IntentParameter == processDoc.IntentParameter) && (processDefinitions[i].ProcessStep == currentProcessStep)) {
+      if ((processDefinitions[i].Category == 'Input') && (processDefinitions[i].Required == 'yes')) {       
+        var dataFound = false;
+        for (var j in processData) {
+          if (processData[j].label == processDefinitions[i].Label) {
+            dataFound = true;
+          } 
+        }
+        if (dataFound == false) {
+          missingRequiredFieldnames.push(processDefinitions[i].Label);
+          //context.log(context, 'checkProcessStep:', processDefinitions[i].Label);
+        }
+      }
+    }
+  }
+  
+  //
+  // 3. search for next process step:
+  //
+  // search current process step
+  for (var i in processDefinitions) {
+    if ((processDefinitions[i].IntentAction == processDoc.IntentAction) && (processDefinitions[i].IntentParameter == processDoc.IntentParameter) && (processDefinitions[i].ProcessStep == currentProcessStep)) {
+      break;
+    }
+  }
+  // first match of current process step is Text Display
+  var textDisplay = processDefinitions[i].Label;
+  // loop until next process step found
+  for (j = i; j < processDefinitions.length; j++) {
+    if (processDefinitions[j].ProcessStep != currentProcessStep) {
+      break;
+    }
+  }
+  
+  // return next process step (if no required fields are missing)
+  var result = {'textDisplay': textDisplay};
+  if (missingRequiredFieldnames.length > 0) {
+    // process step not finished, required fields are missing
+    result.nextProcessStep = currentProcessStep;
+    result.missingRequiredFieldnames = missingRequiredFieldnames;
+  }
+  else {
+    // process step is finished, check if end of process is reached
+    if (processDefinitions[j].ProcessStep == 'END OF PROCESS') {
+      result.textDisplay = processDefinitions[j].Label;
+    }
+    result.nextProcessStep = processDefinitions[j].ProcessStep;
+    result.missingRequiredFieldnames = [];
+  }
+  
+  return result
+  
+}
+
+
+function createResponseText(context, processID, validationResult, checkProcessResult) {
+  // select current process Doc
+  var processFiddler = context.loadProcessFiddler();
+  processFiddler.filterRows (function (row,properties) {
+    return ((row.ProcessID == processID) && (row.ProcessCurrent == 'x') );
+  });
+  var processDoc = processFiddler.getData()[0];
+  
+  // select current process Defintion
+  var processProductDefinitionsFiddler = context.loadProcessProductDefinitionsFiddler();
+  processProductDefinitionsFiddler.filterRows (function (row,properties) {
+    return ((row.IntentAction == processDoc.IntentAction) && (row.IntentParameter == processDoc.IntentParameter));
+  });
+  var processDefinitions = processProductDefinitionsFiddler.getData() // Array
+  
+  
+  // Check subject for ID
+  var subj = processDoc.Subject
+  var regEx_ID = /##ID(\d+)##/gm;
+  var ID1 = regEx_ID.exec(subj)
+  if (ID1 == null) {
+    // nothing found, add ID to subject
+    subj = subj + " ##ID" + processID + "##"
+  }
+  
+  // Create mail elements  
+  var result = {};
+  result.recipient = "test@test.com";
+  result.subject = subj
+  result.body = checkProcessResult.textDisplay + "\n";
+  if (checkProcessResult.missingRequiredFieldnames.length > 0) {
+    result.body = result.body + "\nFehlende Felder:";
+    for (var i in checkProcessResult.missingRequiredFieldnames) {
+      result.body = result.body + "\n - " + checkProcessResult.missingRequiredFieldnames[i] + ": ?";
+    }
+  }
+  
+  var processFiddler = context.loadProcessFiddler();
+  var now = new Date();
+  var outboxID = now.getTime();
+  var newProcessDoc = {};
+  newProcessDoc.ProcessID = processID;
+  newProcessDoc.InboxID = outboxID;
+  newProcessDoc.InboxTime = Utilities.formatDate(now, 'Europe/Berlin', 'yyyy-MM-dd HH:mm:ss');
+  newProcessDoc.IntentAction = "Feedback Mail";
+  newProcessDoc.Subject = subj;
+  newProcessDoc.Body = result.body
+  processFiddler.insertRows (null, 1, [newProcessDoc]);
+  processFiddler.setData(processFiddler.sort ("InboxID"));
+  context.setProcessFiddler(processFiddler);
+  context.saveProcessFiddler();
+  context.log(context, 'Feeback mail', 'Data saved to Process sheet');
+  
+  return result
+}
+
+
+
+function emailSendTest() {
+  // test: send POST to mailgun to send email
+  // https://gist.github.com/gankit/48bdead2699c5af474b51c05f812bce4
+  // see https://stackoverflow.com/questions/42015392/urlfetchapp-how-to-simulate-a-http-post-that-have-params-with-same-name-multipl
+  // 
+  
+  var url = "https://api.mailgun.net/v3/sandbox90b306acfd024419929095b3c4837293.mailgun.org/messages";
+  var payload =
+      {
+        "from" : "Bot <bot@sandbox90b306acfd024419929095b3c4837293.mailgun.org>",
+        "to" : "ansgar.knipschild@mgm-tp.com",
+        "subject" : "hello!",
+        "text" : "hello world"
+      }; 
+  var options =
+      {
+        "method"  : "POST",
+        "payload" : payload,
+        "muteHttpExceptions": true,
+        "headers": {'Authorization': 'Basic ' + Utilities.base64Encode("api:"+context().mailgunKey)}
+      }; 
+  var result = UrlFetchApp.fetch(url, options);
+  if (result.getResponseCode() == 200) {   
+    var params = JSON.parse(result.getContentText());
+    context().log(context(), 'mail sent', JSON.stringify(params))
+  }
+  else {
+    context().log(context(), 'mail error', result.getContentText())
+  }
+}
+
+
+//
+//
+//
+
+
+// Receive incoming POST (email by Mailgun or Zappier)
+function doPost(e) {  
+  if(typeof e !== 'undefined')
+    {
+      //
+      // => IMPORTANT! ALL CHANGES HERE HAVE TO BE PUBLISHED TO BE EFFECTIVE => MENU 'PUBLISH / DEPLOY AS WEB-APP...' !!! (PUBLIC API)
+      //
+      var myContext = context();
+      myContext.log(myContext, 'POST received', JSON.stringify(e.parameter));
+      var processResult = processIncomingMail(myContext, e.parameter);
+      sendResponseMail(myContext, processResult.responseObjResult); 
+  
+      //return ContentService.createTextOutput(JSON.stringify(e.parameter));
+      
+      // Avoid long running tasks / responses:
+      // https://stackoverflow.com/questions/52442261/doposte-how-to-immediately-response-http-200-ok-then-do-long-time-function
+      
+    }
+}
+
+function processIncomingMail(myContext, mailData) {
+  //
+  // => IMPORTANT! ALL CHANGES HERE HAVE TO BE PUBLISHED TO BE EFFECTIVE => MENU 'PUBLISH / DEPLOY AS WEB-APP...' !!! (PUBLIC API)
+  //
+  myContext.log(myContext, 'processIncomingMail', JSON.stringify(mailData));
+  
+  var IDobj = storeMailToInbox(myContext, mailData);
+  var mailParsedData = parseMailBody(myContext, mailData['body-plain'], IDobj);
+  var processIDfound = parseProcessID(myContext, mailData);
+  var newProcessID = storeMailDataToProcess(myContext, processIDfound, mailParsedData, mailData);
+  var validationResult = validateProcessData(myContext, newProcessID);
+  var checkProcessResult = checkProcessStep(myContext, newProcessID); 
+  var responseObjResult = createResponseText(myContext, newProcessID, validationResult, checkProcessResult);
+  
+  var result = {};
+  result.IDobj = IDobj;
+  result.mailParsedData = mailParsedData;
+  result.processIDfound = processIDfound;
+  result.newProcessID = newProcessID;
+  result.validationResult = validationResult;
+  result.checkProcessResult = checkProcessResult;
+  result.responseObjResult = responseObjResult;
+  
+  return result;
+  
+}
+
+function parseProcessID(context, mailData) {
+  var processID = '';
+  // ##ID77777##
+  // parse mailData.subject
+  // parse mailData['body-plain']
+  
+  var regEx_ID = /##ID(\d+)##/gm;
+  var ID1 = regEx_ID.exec(mailData.subject)
+  if (ID1 == null) {
+    // nothing found, search in body
+    var ID2 = regEx_ID.exec(mailData['body-plain']);
+    if (ID2 == null) {
+      // nothing found, create new one
+      processID = 'new'
+    }
+    else {
+      processID = ID2[1]; // first regex-Group match
+    }
+  }
+  else {
+    processID = ID1[1]; // first regex-Group match
+  }
+
+  return processID
+}
+
+function storeMailDataToProcess(context, processIDfound, mailParsedData, mailData) {
+  var processFiddler = context.loadProcessFiddler();
+  var now = new Date();
+  var processID = now.getTime();
+  context.log(context, 'test match', JSON.stringify(mailParsedData));
+  //processIDfound = 'new';
+  
+  var newProcessDoc = {};
+  
+  if (processIDfound == 'new') {
+    // create new process
+    newProcessDoc.ProcessID = processID;
+    //newProcessDoc.ProcessStep = 'Input Calculation Data';
+  }
+  else
+  {
+    processID = processIDfound;
+    // copy & update existing process
+    //
+    // get last process doc
+    processFiddler.filterRows (function (row,properties) {
+      return ((row.ProcessID == processID) && (row.ProcessCurrent == 'x') );
+    });
+    var lastProcessDoc = processFiddler.getData()[0];
+    // reset filter (not very elegant...)
+    processFiddler = context.loadProcessFiddler();
+    // reset status 'ProcessCurrent' of all matches
+    var allProcessIDmatches = processFiddler.selectRows('ProcessID',function (value , properties) {
+      return value == processIDfound;
+    });
+    allProcessIDmatches.map(function(d) {
+      return processFiddler.getData()[d].ProcessCurrent = '';
+    })
+    
+    // copy last process line/object to new object (full object)
+    newProcessDoc = {};
+    for (var attr in lastProcessDoc) {
+        if (lastProcessDoc.hasOwnProperty(attr)) newProcessDoc[attr] = lastProcessDoc[attr];
+    }
+    // merge Data objects : last process line PLUS mail data
+    var oldDataArray = JSON.parse(lastProcessDoc.Data).data; // Array
+    for (var i in mailParsedData.data) {
+      var tempSearchFor = mailParsedData.data[i];
+      var updatedFlag = false;
+      for (var j in oldDataArray) {
+        if (tempSearchFor.label == oldDataArray[j].label) {
+          // replace existing data
+          oldDataArray[j].value = tempSearchFor.value;
+          updatedFlag = true
+          break;
+        }
+      }
+      if (updatedFlag == false) {
+        // add new data, if not updated above
+        var tmp_obj = {};
+        tmp_obj['label'] = tempSearchFor.label;
+        tmp_obj['value'] = tempSearchFor.value;
+        oldDataArray.push(tmp_obj);  
+      }
+    }    
+    mailParsedData.data = oldDataArray;
+    // check for empty/unknown intent (nothing defined in email), copy last intent
+    if (mailParsedData.intent.action == 'unknown') {
+      mailParsedData.intent.action = JSON.parse(lastProcessDoc.Data).intent.action;
+      mailParsedData.intent.parameter = JSON.parse(lastProcessDoc.Data).intent.parameter;
+    }
+  }
+  
+  newProcessDoc.InboxID = mailParsedData.InboxID;
+  newProcessDoc.InboxTime = mailParsedData.InboxTime;
+  newProcessDoc.IntentAction = mailParsedData.intent.action;
+  newProcessDoc.IntentParameter = mailParsedData.intent.parameter;
+  newProcessDoc.From = mailData.from;
+  newProcessDoc.Subject = mailData.subject;
+  newProcessDoc.Body = mailData["body-plain"];
+  newProcessDoc.ProcessCurrent = 'x';
+  newProcessDoc.Data = JSON.stringify(mailParsedData);
+  
+  // copy data from mail to process doc (if column existing)
+  for (var i in mailParsedData.data) {
+    if (processFiddler.getData()[1].hasOwnProperty(mailParsedData.data[i].label)) {
+      newProcessDoc[mailParsedData.data[i].label] = mailParsedData.data[i].value;
+    }
+  }
+  
+  processFiddler.insertRows (null, 1, [newProcessDoc]);
+  //context.log(context, 'test match', mailParsedData);
+  
+  
+  processFiddler.setData(processFiddler.sort ("InboxID"));
+  context.setProcessFiddler(processFiddler);
+  context.saveProcessFiddler();
+  context.log(context, 'processIncomingMail', 'Data saved to Process');
+  
+  
+  return processID
+}
+
+
+function storeMailToInbox(context, mailData) {
+  // store Mail to spreadsheet
+  
+  var inboxFiddler = context.loadInboxFiddler();
+  var now = new Date();
+  var InboxID = now.getTime();
+  var InboxTime = Utilities.formatDate(now, 'Europe/Berlin', 'yyyy-MM-dd HH:mm:ss');
+  
+  inboxFiddler.insertRows ( null , 1 , [{
+    "InboxID": InboxID,
+    "InboxTime": InboxTime,
+    "Source": "EMAIL",
+    "From": mailData.from,
+    "Subject": mailData.subject,
+    "Body": mailData["body-plain"],
+    "Data": JSON.stringify(mailData)
+    }]);
+  inboxFiddler.setData(inboxFiddler.sort ("InboxID"));
+  context.setInboxFiddler(inboxFiddler);
+  context.saveInboxFiddler();
+  context.log(context, 'processIncomingMail', 'Mail saved to Inbox Sheet');
+  return {"InboxID": InboxID, "InboxTime": InboxTime}
+}
+
+
+
+function sendResponseMail(context, responseObj) {
+ 
+  // send POST to mailgun to send email
+  // https://gist.github.com/gankit/48bdead2699c5af474b51c05f812bce4
+  // see https://stackoverflow.com/questions/42015392/urlfetchapp-how-to-simulate-a-http-post-that-have-params-with-same-name-multipl
+  // 
+  var url = "https://api.mailgun.net/v3/sandbox90b306acfd024419929095b3c4837293.mailgun.org/messages";
+  var payload =
+      {
+        "from" : "Bot <bot@sandbox90b306acfd024419929095b3c4837293.mailgun.org>",
+        "to" : "ansgar.knipschild@mgm-tp.com",
+        "subject" : responseObj.subject,
+        "text" : responseObj.body
+      }; 
+  // responseObj.recipient
+  var options =
+      {
+        "method"  : "POST",
+        "payload" : payload,
+        "muteHttpExceptions": true,
+        "headers": {'Authorization': 'Basic ' + Utilities.base64Encode("api:"+context.mailgunKey)}
+      }; 
+  var result = UrlFetchApp.fetch(url, options);
+  if (result.getResponseCode() == 200) {   
+    var params = JSON.parse(result.getContentText());
+    context.log(context, 'mail sent', JSON.stringify(params))
+  }
+  else {
+    context.log(context, 'mail error', result.getContentText())
+  }
+  
+  
+  
+  /*
+  //send POST to Zappier to send email
+  var url = "https://hooks.zapier.com/hooks/catch/4104424/c4twwa";
+  var payload =
+      {
+        "subject" : "hello",
+        "content" : "hello world"
+      }; 
+  var options =
+      {
+        "method"  : "POST",
+        "payload" : payload,   
+        "followRedirects" : true,
+        "muteHttpExceptions": true
+      }; 
+  var result = UrlFetchApp.fetch(url, options);
+  if (result.getResponseCode() == 200) {   
+    var params = JSON.parse(result.getContentText());
+    context.log(context, 'mail sent', JSON.stringify(params))
+  }
+  */
+  
+  
 
 }
 
 
-function parseMailBody(context, fullMailBody) {
+
+
+function parseMailBody(context, fullMailBody, IDobj) {
   // https://regexr.com
   // http://regexlib.com/
   // https://regex101.com 
@@ -45,21 +631,27 @@ function parseMailBody(context, fullMailBody) {
   // All intents are stored in one 'catalog', ordered by priority (search stops after first match)
   
   // reused search components
-  var want = "(want|möchte|hätte gerne|.*)";
+  var want = "(want|möchte|hätte gerne|bitte schicken sie|.*)";
   var d_o = "(hpdo|d&o|d & o)";
   var cyber = "(hpcy|cyber)";
-  var offer = "(offer|angebot)";
+  var offer = "(offer|angebot|prämie|berechnung)";
   
   var intent_catalog = [
     {
-      intent: {action: 'create offer', parameter: 'cyber'},
+      intent: {action: 'Register user', parameter: ''},
+      searches: [
+        want+"(?=.*(registrieren|anmelden))"
+      ]
+    },
+    {
+      intent: {action: 'Create offer', parameter: 'Cyber'},
       searches: [
         want+"(?=.*"+offer+")(?=.*"+cyber+")",
         want+"(?=.*"+cyber+")(?=.*"+offer+")"
       ]
     },
     {
-      intent: {action: 'create offer', parameter: 'd&o'},
+      intent: {action: 'Create offer', parameter: 'D&O'},
       searches: [
         want+"(?=.*"+offer+")(?=.*"+d_o+")",
         want+"(?=.*"+d_o+")(?=.*"+offer+")"
@@ -69,7 +661,7 @@ function parseMailBody(context, fullMailBody) {
   
   var label_catalog = [
     {
-      label: 'Turnover',
+      label: 'Umsatz',
       searches: [
         "turnover",
         "umsatz|Gesamtumsatz|Au(ss|ß)en(-)*umsatz"
@@ -95,7 +687,7 @@ function parseMailBody(context, fullMailBody) {
   
   // Step 2
   // Extract value pairs, separated by : or =
-  var regEx_Data1 = /([a-zA-Z ]+)[\:=]\s*([a-zA-Z]+|([0-9,.]+))/gm;
+  var regEx_Data1 = /([a-zA-Z ]+)[\:=]\s*([a-zA-Z@.]+|([0-9,.]+))/gm;
   var Data1 = LastMail.match(regEx_Data1)
 
   // Loop through value pairs, split, clean
@@ -111,9 +703,9 @@ function parseMailBody(context, fullMailBody) {
     // check for thousend decimal separator '.' and remove it
     data_value = data_value.replace(/(\d+)\.(?=\d{3}(\D|$))/g, "$1");
     
-    // check for double comma and remove it: eg. 500,90,
-    // data_value = data_value.replace(/(.*),$/g, "$1");
-    data_value = data_value.replace(/(\d+,\d+),/g, "$1");
+    // check for comma/semicolon separator at the end and remove it: eg. 500,90,
+    //data_value = data_value.replace(/(\d+,\d+),/g, "$1");
+    data_value = data_value.replace(/(\d+)[,;]$/g, "$1");
     
     // loop through label catalog and standardize label
     for (var ii in label_catalog) {
@@ -137,11 +729,13 @@ function parseMailBody(context, fullMailBody) {
   
   var result_obj = {
     'intent': intent,
+    'InboxID': IDobj.InboxID, 
+    'InboxTime': IDobj.InboxTime,
     'data': Data2
     }
-    
-  //context.log(context, 'Log out of parser-function ', JSON.stringify(Data2))  
-
+  
+  context.log(context, 'parseMailBody', JSON.stringify(result_obj));
+  
   return result_obj
 }
 
